@@ -1,7 +1,7 @@
 
-**Endava Devops Challenge**
+# **Endava Devops Challenge**
 
-**Dependencies**
+## **Dependencies**
 
 - ansible
 - python3
@@ -11,7 +11,7 @@
 For the mysql_secure_installation module - [mysql_secure_installation module](https://github.com/eslam-gomaa/mysql_secure_installation_Ansible)
 
 
-**Description**
+## **Description**
 
 1. Upload of SSH public key to AWS.
 2. Creating security group and adding rules for TCP ports 22 and 80.
