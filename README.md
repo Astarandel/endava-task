@@ -8,7 +8,7 @@ python3
 python3-pip
 boto, boto3, 
 
-For the mysql_secure_installation module - https://github.com/eslam-gomaa/mysql_secure_installation_Ansible
+For the mysql_secure_installation module - (https://github.com/eslam-gomaa/mysql_secure_installation_Ansible)
 
 
 **Description**
