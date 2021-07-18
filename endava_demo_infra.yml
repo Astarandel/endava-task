@@ -1,110 +1,99 @@
 - hosts: localhost
   connection: local
-  gather_facts: False
-
+  gather_facts: false
   vars:
     key_name: id_rsa
     region: eu-central-1
     image: ami-0bdbe51a2e8070ff2
-    id: "endava"
-    sec_group: "{{ id }}-sec"
-    application: "endava"
-
+    id: endava
+    sec_group: '{{ id }}-sec'
+    application: endava
   tasks:
-
     - name: Upload public key to AWS
       ec2_key:
-          name: "{{ key_name }}"
-          key_material: "{{ lookup('file', '/root/.ssh/{{ key_name }}.pub') }}"
-          region: "{{ region }}"
-          aws_access_key: "{{ec2_access_key}}"
-          aws_secret_key: "{{ec2_secret_key}}"
-
+        name: '{{ key_name }}'
+        key_material: '{{ lookup(''file'', ''/root/.ssh/{{ key_name }}.pub'') }}'
+        region: '{{ region }}'
+        aws_access_key: '{{ec2_access_key}}'
+        aws_secret_key: '{{ec2_secret_key}}'
     - name: Create security group
       ec2_group:
-          name: "{{ sec_group }}"
-          description: "Sec group for app {{ id }}"
-          region: "{{ region }}"
-          aws_access_key: "{{ec2_access_key}}"
-          aws_secret_key: "{{ec2_secret_key}}"
-          rules:
-            - proto: tcp
-              ports:
-                - 22
-              cidr_ip: 0.0.0.0/0
-              rule_desc: allow all on ssh port
-            - proto: tcp
-              ports:
-                - 80
-              cidr_ip: 0.0.0.0/0
-      register: result_sec_group      
-
+        name: '{{ sec_group }}'
+        description: 'Sec group for app {{ id }}'
+        region: '{{ region }}'
+        aws_access_key: '{{ec2_access_key}}'
+        aws_secret_key: '{{ec2_secret_key}}'
+        rules:
+          - proto: tcp
+            ports:
+              - 22
+            cidr_ip: 0.0.0.0/0
+            rule_desc: allow all on ssh port
+          - proto: tcp
+            ports:
+              - 80
+            cidr_ip: 0.0.0.0/0
+      register: result_sec_group
     - name: Create web server ec2 instance
       ec2:
-         aws_access_key: "{{ec2_access_key}}"
-         aws_secret_key: "{{ec2_secret_key}}"
-         key_name: "{{ key_name }}"
-         group: "{{ sec_group }}" 
-         instance_type: t2.micro
-         region: "{{ region }}"
-         image: "{{ image }}"
-         wait: true
-         monitoring: yes 
-         count: 1
-         instance_tags:
-            Name: webserver
+        aws_access_key: '{{ec2_access_key}}'
+        aws_secret_key: '{{ec2_secret_key}}'
+        key_name: '{{ key_name }}'
+        group: '{{ sec_group }}'
+        instance_type: t2.micro
+        region: '{{ region }}'
+        image: '{{ image }}'
+        wait: true
+        monitoring: 'yes'
+        count: 1
+        instance_tags:
+          Name: webserver
       register: ec2_webserver
-
     - name: Add new instance to host group
       add_host:
-              hostname: "{{ item.public_ip }}"
-              groupname: webserver
-      loop: "{{ ec2_webserver.instances }}"
-
+        hostname: '{{ item.public_ip }}'
+        groupname: webserver
+      loop: '{{ ec2_webserver.instances }}'
     - name: Wait for SSH to come up
       wait_for:
-              host: "{{ item.public_dns_name }}"
-              port: 22
-              state: started
-      loop: "{{ ec2_webserver.instances }}"
-
+        host: '{{ item.public_dns_name }}'
+        port: 22
+        state: started
+      loop: '{{ ec2_webserver.instances }}'
     - name: Create DB server ec2 instance
       ec2:
-         aws_access_key: "{{ec2_access_key}}"
-         aws_secret_key: "{{ec2_secret_key}}"
-         key_name: "{{ key_name }}"
-         group: "{{ sec_group }}"
-         instance_type: t2.micro
-         region: "{{ region }}"
-         image: "{{ image }}"
-         wait: true
-         monitoring: yes
-         count: 1
-         instance_tags:
-            Name: db-server
+        aws_access_key: '{{ec2_access_key}}'
+        aws_secret_key: '{{ec2_secret_key}}'
+        key_name: '{{ key_name }}'
+        group: '{{ sec_group }}'
+        instance_type: t2.micro
+        region: '{{ region }}'
+        image: '{{ image }}'
+        wait: true
+        monitoring: 'yes'
+        count: 1
+        instance_tags:
+          Name: db-server
       register: ec2
-
     - name: Add new instance to host group
       add_host:
-              hostname: "{{ item.public_ip }}"
-              groupname: db-server
-      loop: "{{ ec2.instances }}"
-
+        hostname: '{{ item.public_ip }}'
+        groupname: db-server
+      loop: '{{ ec2.instances }}'
     - name: Wait for SSH to come up
       wait_for:
-              host: "{{ item.public_dns_name }}"
-              port: 22
-              state: started
-      loop: "{{ ec2.instances }}"
-
+        host: '{{ item.public_dns_name }}'
+        port: 22
+        state: started
+      loop: '{{ ec2.instances }}'
     - name: Create the ELB only listening over port 80
       ec2_elb_lb:
-        aws_access_key: "{{ec2_access_key}}"
-        aws_secret_key: "{{ec2_secret_key}}"
-        name: "{{ application }}-load-balancer"
-        security_group_names: "{{ sec_group }}"
+        aws_access_key: '{{ec2_access_key}}'
+        aws_secret_key: '{{ec2_secret_key}}'
+        name: '{{ application }}-load-balancer'
+        security_group_names: '{{ sec_group }}'
         state: present
-        region: "{{ region }}"
+        region: '{{ region }}'
         zones:
           - eu-central-1a
           - eu-central-1b
@@ -112,93 +101,100 @@
           - protocol: http
             load_balancer_port: 80
             instance_port: 80
-        instance_ids: "{{ item.id }}"
-      loop: "{{ ec2_webserver.instances }}"
-
+        instance_ids: '{{ item.id }}'
+      loop: '{{ ec2_webserver.instances }}'
     - name: Create an alarm to recover a failed instance
       community.aws.ec2_metric_alarm:
-        aws_access_key: "{{ec2_access_key}}"
-        aws_secret_key: "{{ec2_secret_key}}"
+        aws_access_key: '{{ec2_access_key}}'
+        aws_secret_key: '{{ec2_secret_key}}'
         state: present
         region: eu-central-1
-        name: "recover-webserver"
-        metric: "StatusCheckFailed_System"
-        namespace: "AWS/EC2"
+        name: recover-webserver
+        metric: StatusCheckFailed_System
+        namespace: AWS/EC2
         statistic: Minimum
-        comparison: "GreaterThanOrEqualToThreshold"
+        comparison: GreaterThanOrEqualToThreshold
         threshold: 0.99
         period: 300
         evaluation_periods: 2
-        unit: "Count"
-        description: "This will recover an instance when it fails"
-        dimensions: {"InstanceId":"{{ item.id }}"}
-        alarm_actions: ["arn:aws:automate:eu-central-1:ec2:recover"]
-      loop: "{{ ec2_webserver.instances }}"
-
+        unit: Count
+        description: This will recover an instance when it fails
+        dimensions:
+          InstanceId: '{{ item.id }}'
+        alarm_actions:
+          - 'arn:aws:automate:eu-central-1:ec2:recover'
+      loop: '{{ ec2_webserver.instances }}'
     - name: Create an alarm to recover a failed instance
       community.aws.ec2_metric_alarm:
-        aws_access_key: "{{ec2_access_key}}"
-        aws_secret_key: "{{ec2_secret_key}}"
+        aws_access_key: '{{ec2_access_key}}'
+        aws_secret_key: '{{ec2_secret_key}}'
         state: present
         region: eu-central-1
-        name: "recover-db"
-        metric: "StatusCheckFailed_System"
-        namespace: "AWS/EC2"
+        name: recover-db
+        metric: StatusCheckFailed_System
+        namespace: AWS/EC2
         statistic: Minimum
-        comparison: "GreaterThanOrEqualToThreshold"
+        comparison: GreaterThanOrEqualToThreshold
         threshold: 0.99
         period: 300
         evaluation_periods: 2
-        unit: "Count"
-        description: "This will recover an instance when it fails"
-        dimensions: {"InstanceId":"{{ item.id }}"}
-        alarm_actions: ["arn:aws:automate:eu-central-1:ec2:recover"]
-      loop: "{{ ec2.instances }}"
-
-
+        unit: Count
+        description: This will recover an instance when it fails
+        dimensions:
+          InstanceId: '{{ item.id }}'
+        alarm_actions:
+          - 'arn:aws:automate:eu-central-1:ec2:recover'
+      loop: '{{ ec2.instances }}'
 - hosts: webserver
   remote_user: ubuntu
-  become: yes
-  gather_facts: False
-
+  become: 'yes'
+  gather_facts: false
   tasks:
-
     - name: Install nginx server
       apt:
-        name: ['nginx']
+        name:
+          - nginx
         state: latest
-
+    - name: Copy index.html
+      copy:
+        src: /etc/ansible/AWS_Ansible/files/index.html
+        dest: /var/www/html
+        owner: root
+        group: root
+        mode: 420
+    - name: restart nginx
+      service: name=nginx state=restarted
 - hosts: db-server
   remote_user: ubuntu
-  become: yes
-  gather_facts: False
-
+  become: 'yes'
+  gather_facts: false
   tasks:
-
     - name: Install mariadb server
       apt:
-        name: ['mariadb-server']
-        update_cache: yes
-
+        name:
+          - mariadb-server
+        update_cache: 'yes'
     - name: Install python3
       apt:
-        name: ['python3']
-        update_cache: yes
-
+        name:
+          - python3
+        update_cache: 'yes'
     - name: Install python3 mysql driver
       apt:
-        name: ['python3-pymysql']
-        update_cache: yes
-
+        name:
+          - python3-pymysql
+        update_cache: 'yes'
     - name: mysql_secure_installation
       mysql_secure_installation:
         login_password: ''
-        new_password: "{{mariadb_root_password}}"
+        new_password: '{{mariadb_root_password}}'
         user: root
         login_host: localhost
-        hosts: ['localhost', '127.0.0.1', '::1']
+        hosts:
+          - localhost
+          - 127.0.0.1
+          - '::1'
         change_root_password: true
         remove_anonymous_user: true
         disallow_root_login_remotely: true
-        remove_test_db: true 
-
+        remove_test_db: true
