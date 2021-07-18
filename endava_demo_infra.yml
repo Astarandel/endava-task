@@ -161,7 +161,7 @@
         dest: /var/www/html
         owner: root
         group: root
-        mode: 420
+        mode: 0644
     - name: restart nginx
       service: name=nginx state=restarted
 - hosts: db-server
