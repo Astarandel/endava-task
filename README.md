@@ -21,5 +21,5 @@ For the mysql_secure_installation module - [mysql_secure_installation module](ht
 6. Creating Load balancer and adding the web server instance to it.
 7. Creating alarms to recover instances in case of system failure. 
 8. Install and configure Nginx web server.
-9. Installing MariaDB server with dependancies.
+9. Installing MariaDB server with dependencies.
 10. Securing MariaDB installation and setting root password.
